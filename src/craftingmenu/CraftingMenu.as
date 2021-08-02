@@ -62,6 +62,9 @@ class CraftingMenu extends MovieClip
 	private var _config: Object;
 	private var _subtypeName: String;
 	
+	//Frostfall
+	private var _fetchedRanges: Array;
+	
 	
   /* PROPERTIES */
 
@@ -205,6 +208,10 @@ class CraftingMenu extends MovieClip
 		BottomBarInfo["Button" + CraftingMenu.EXIT_BUTTON].disabled = false;
 		BottomBarInfo["Button" + CraftingMenu.AUX_BUTTON].addEventListener("click", this, "onAuxButtonPress");
 		BottomBarInfo["Button" + CraftingMenu.AUX_BUTTON].disabled = false;*/
+		
+		//Frostfall
+		_fetchedRanges = [];
+		ItemInfo.currentList = ItemList.entryList;
 		
 		ExitMenuRect.onPress = function ()
 		{
@@ -587,6 +594,18 @@ class CraftingMenu extends MovieClip
 
 	private function onItemHighlightChange(event: Object): Void
 	{
+		//Frostfall
+		ItemInfo.currentListIndex = event.index;
+		var range = Math.floor(event.index / 5);
+		//skse.Log("Current range is " + range);
+		if (_fetchedRanges.indexOf(range) === -1 || _fetchedRanges.indexOf(range) === undefined) {
+			//skse.Log("Need to fetch range " + range);
+			var rangeMin = range * 5;
+			var rangeMax = (range * 5) + 4;
+			FetchProtectionDataForList(event.target.itemList._entryList, rangeMin, rangeMax);
+			_fetchedRanges.push(range);
+		}
+		
 		SetSelectedItem(event.index);
 		FadeInfoCard(event.index == -1);
 		UpdateButtonText();
@@ -599,6 +618,8 @@ class CraftingMenu extends MovieClip
 			GameDelegate.call("SetSelectedCategory", [CategoryList.CategoriesList.selectedIndex]);
 		}
 		
+		//Frostfall
+		//FetchProtectionDataForList(event.target.itemList._entryList);
 		onItemHighlightChange(event);
 	}
 
@@ -705,5 +726,67 @@ class CraftingMenu extends MovieClip
 		if (aiMouseButton == 0) {
 			onItemsListInputCatcherClick();
 		}
+	}
+	
+	//Frostfall
+	public function FetchProtectionDataForList(entryList: Array, rangeMin: Number, rangeMax: Number): Void
+	{
+		for(var i = rangeMin; i <= rangeMax; i++) {
+			//skse.Log(idx + " : " + event.target.itemList._entryList[idx]);
+			var entry = entryList[i];
+			//skse.Log(idx + " : " + entry.formId);
+			if (entry.formType === 26) {
+				getEntryProtectionData(entry.text, i, Number(entry.formId));
+			};
+		};
+		//skse.Log("FormID: " + event.target.itemList.selectedEntry.formId);
+	}
+	
+	public function setEntryProtectionData(/* values */): Void
+	{
+		var index:Number = arguments[0];
+		var warmth:Number = arguments[1];
+		var coverage:Number = arguments[2];
+		//skse.Log("Receiving idx " + index + ", warmth " + warmth + ", coverage " + coverage);
+		var entry = ItemList.entryList[index];
+		entry["warmth"] = warmth;
+		entry["coverage"] = coverage;
+
+		var selectedEntry = ItemList.selectedEntry;
+		if (selectedEntry.formType === 26) {
+			var selectedIdx:Number = selectedEntry.itemIndex;
+			var entryFromSelected = ItemList.entryList[selectedIdx];
+			if (entryFromSelected["warmth"] !== undefined && entryFromSelected["coverage"] !== undefined) {
+				ItemInfo.ForceProtectionDisplay(entryFromSelected.warmth, entryFromSelected.coverage);
+			}
+		}
+		//skse.Log("Entry values are " + entry.warmth + " and " + entry.coverage);
+	}
+	
+	public function setEntryProtectionDataOnProcess(entryIndex: Number): Void
+	{
+		//skse.Log("setEntryProtectionDataOnProcess")
+		ItemInfo.currentListIndex = entryIndex;
+		var range = Math.floor(entryIndex / 5);
+		//skse.Log("Current range is " + range);
+		if (_fetchedRanges.indexOf(range) === -1 || _fetchedRanges.indexOf(range) === undefined) {
+			//skse.Log("Need to fetch range " + range);
+			var rangeMin = range * 5;
+			var rangeMax = (range * 5) + 4;
+			FetchProtectionDataForList(ItemList.entryList, rangeMin, rangeMax);
+			_fetchedRanges.push(range);
+		}
+	}
+	
+	private function getEntryProtectionData(entryName: String, entryIndex: Number, formId: Number) 
+	{
+		//skse.Log("sending " + entryIndex + " and " + formId);
+		skse.SendModEvent("Frost_OnSkyUIInvListGetEntryProtectionData", entryName, entryIndex, formId);
+	}
+	
+	private function onFrostfallInvalidateFetchedRangesOnProcess() 
+	{
+		_fetchedRanges = [];
+		setEntryProtectionDataOnProcess(ItemList.selectedIndex)
 	}
 }

@@ -20,6 +20,12 @@ class BottomBar extends MovieClip
 
 	private var _playerInfoObj: Object;
 	
+	//Frostfall
+	private var _currentTotalWarmth: Number;
+	private var _currentTotalCoverage: Number;
+	private var _lastWarmthDelta: String;
+	private var _lastCoverageDelta: String;
+	
 	
   /* STAGE ELEMENTS */
 
@@ -98,6 +104,7 @@ class BottomBar extends MovieClip
 					infoCard.ArmorRatingValue.textAutoSize = "shrink";
 					infoCard.ArmorRatingValue.html = true;
 					infoCard.ArmorRatingValue.SetText(strArmor, true);
+					updateFrostfallValues(a_itemUpdateObj);
 					break;
 					
 				case Inventory.ICT_WEAPON:
@@ -120,12 +127,15 @@ class BottomBar extends MovieClip
 					var EF_HEALTH: Number = 0;
 					var EF_MAGICKA: Number = 1;
 					var EF_STAMINA: Number = 2;
-					if (a_itemUpdateObj.potionType == EF_MAGICKA) 
+					if (a_itemUpdateObj.potionType == EF_MAGICKA) {
 						infoCard.gotoAndStop("MagickaPotion");
-					else if (a_itemUpdateObj.potionType == EF_STAMINA) 
+					}
+					else if (a_itemUpdateObj.potionType == EF_STAMINA) {
 						infoCard.gotoAndStop("StaminaPotion");
-					else if (a_itemUpdateObj.potionType == EF_HEALTH) 
+					}
+					else if (a_itemUpdateObj.potionType == EF_HEALTH) {
 						infoCard.gotoAndStop("HealthPotion");
+					}
 					break;
 					
 				case Inventory.ICT_SPELL_DEFAULT:
@@ -166,6 +176,9 @@ class BottomBar extends MovieClip
 				if (itemType === Inventory.ICT_ARMOR) {
 					infoCard.ArmorRatingValue._x = infoCard.CarryWeightLabel._x + infoCard.CarryWeightLabel.getLineMetrics(0).x - infoCard.ArmorRatingValue._width - 5;
 					infoCard.ArmorRatingLabel._x = infoCard.ArmorRatingValue._x + infoCard.ArmorRatingValue.getLineMetrics(0).x - infoCard.ArmorRatingLabel._width;
+					//Frostfall
+					updateFrostfallElementPositions();
+					
 				} else if (itemType === Inventory.ICT_WEAPON) {
 					infoCard.DamageValue._x = infoCard.CarryWeightLabel._x + infoCard.CarryWeightLabel.getLineMetrics(0).x - infoCard.DamageValue._width - 5;
 					infoCard.DamageLabel._x = infoCard.DamageValue._x + infoCard.DamageValue.getLineMetrics(0).x - infoCard.DamageLabel._width;
@@ -173,7 +186,7 @@ class BottomBar extends MovieClip
 			}
 			updateStatMeter(infoCard.HealthRect, _healthMeter, _playerInfoObj.health, _playerInfoObj.maxHealth, _playerInfoObj.healthColor);
 			updateStatMeter(infoCard.MagickaRect, _magickaMeter, _playerInfoObj.magicka, _playerInfoObj.maxMagicka, _playerInfoObj.magickaColor);
-			updateStatMeter(infoCard.StaminaRect, _staminaMeter, _playerInfoObj.stamina, _playerInfoObj.maxStamina, _playerInfoObj.staminaColor);
+			updateStatMeter(infoCard.StaminaRect, _staminaMeter, _playerInfoObj.stamina, _playerInfoObj.maxStamina, _playerInfoObj.staminaColor);			
 		}
 	}
 
@@ -261,6 +274,9 @@ class BottomBar extends MovieClip
 					infoCard.ArmorRatingValue.SetText(strArmor, true);
 					infoCard.ArmorRatingValue._x = infoCard.CarryWeightLabel._x + infoCard.CarryWeightLabel.getLineMetrics(0).x - infoCard.ArmorRatingValue._width - 5;
 					infoCard.ArmorRatingLabel._x = infoCard.ArmorRatingValue._x + infoCard.ArmorRatingValue.getLineMetrics(0).x - infoCard.ArmorRatingLabel._width;
+					//Frostfall
+					updateFrostfallValues(a_itemUpdateObj);
+					updateFrostfallElementPositions();
 					break;
 					
 				case Inventory.ICT_WEAPON:
@@ -324,5 +340,93 @@ class BottomBar extends MovieClip
 		infoCard.LevelMeterInstance.gotoAndStop("Pause");
 		_levelMeter.SetPercent(a_levelPercent);
 	}
-
+	
+	//Frostfall
+	public function updateFrostfallWarmth(warmth: Number): Void
+	{
+		_currentTotalWarmth = warmth;
+		updateFrostfallWarmthFromStoredValues()
+		updateFrostfallElementPositions();
+	}
+	
+	public function updateFrostfallCoverage(coverage: Number): Void
+	{
+		_currentTotalCoverage = coverage;
+		updateFrostfallCoverageFromStoredValues()
+		updateFrostfallElementPositions();
+	}
+	
+	public function updateFrostfallElementPositions(): Void
+	{
+		var infoCard = playerInfoCard;
+		infoCard.RainProtectionValue._x = infoCard.ArmorRatingLabel._x + infoCard.ArmorRatingLabel.getLineMetrics(0).x - infoCard.RainProtectionValue._width - 5;
+		infoCard.RainProtectionLabel._x = infoCard.RainProtectionValue._x + infoCard.RainProtectionValue.getLineMetrics(0).x - infoCard.RainProtectionLabel._width;
+		infoCard.ExposureProtectionValue._x = infoCard.RainProtectionLabel._x + infoCard.RainProtectionLabel.getLineMetrics(0).x - infoCard.ExposureProtectionValue._width - 5;
+		infoCard.ExposureProtectionLabel._x = infoCard.ExposureProtectionValue._x + infoCard.ExposureProtectionValue.getLineMetrics(0).x - infoCard.ExposureProtectionLabel._width;
+	}
+	
+	public function updateFrostfallValues(a_itemUpdateObj: Object): Void
+	{
+		var infoCard = playerInfoCard;
+				
+		var strWarmth: String = _currentTotalWarmth.toString();
+		if (a_itemUpdateObj.currentArmorWarmth !== undefined) {
+			var iWarmthDelta = a_itemUpdateObj.warmth - a_itemUpdateObj.currentArmorWarmth;
+			// skse.Log("a_itemUpdateObj.warmth is " + a_itemUpdateObj.warmth + ", a_itemUpdateObj.currentArmorWarmth is " + a_itemUpdateObj.currentArmorWarmth);
+			if (iWarmthDelta > 0) {
+				_lastWarmthDelta = " <font color=\'#189515\'>(+" + iWarmthDelta.toString() + ")</font>";
+				strWarmth = strWarmth + _lastWarmthDelta;
+			}
+			else if (iWarmthDelta < 0) {
+				_lastWarmthDelta = " <font color=\'#FF0000\'>(" + iWarmthDelta.toString() + ")</font>";
+				strWarmth = strWarmth + _lastWarmthDelta;
+			}
+			else {
+				_lastWarmthDelta = "";
+			}
+		}
+		infoCard.ExposureProtectionValue.textAutoSize = "shrink";
+		infoCard.ExposureProtectionValue.html = true;
+		infoCard.ExposureProtectionValue.SetText(strWarmth, true);
+		
+		var strCoverage: String = _currentTotalCoverage.toString();
+		if (a_itemUpdateObj.currentArmorCoverage !== undefined) {
+			var iCoverageDelta = a_itemUpdateObj.coverage - a_itemUpdateObj.currentArmorCoverage;
+			// skse.Log("Coverage Delta is " + iCoverageDelta)
+			if (iCoverageDelta > 0) {
+				_lastCoverageDelta = " <font color=\'#189515\'>(+" + iCoverageDelta.toString() + ")</font>"
+				strCoverage = strCoverage + _lastCoverageDelta;
+			}
+			else if (iCoverageDelta < 0) {
+				_lastCoverageDelta = " <font color=\'#FF0000\'>(" + iCoverageDelta.toString() + ")</font>"
+				strCoverage = strCoverage + _lastCoverageDelta;
+			}
+			else {
+				_lastCoverageDelta = "";
+			}
+		}
+		infoCard.RainProtectionValue.textAutoSize = "shrink";
+		infoCard.RainProtectionValue.html = true;
+		infoCard.RainProtectionValue.SetText(strCoverage, true);
+	}
+	
+	private function updateFrostfallWarmthFromStoredValues(): Void
+	{
+		var infoCard = playerInfoCard;
+		var strWarmth: String = _currentTotalWarmth.toString();
+		strWarmth = strWarmth + _lastWarmthDelta;
+		infoCard.ExposureProtectionValue.textAutoSize = "shrink";
+		infoCard.ExposureProtectionValue.html = true;
+		infoCard.ExposureProtectionValue.SetText(strWarmth, true);
+	}
+	
+	private function updateFrostfallCoverageFromStoredValues(): Void
+	{
+		var infoCard = playerInfoCard;		
+		var strCoverage: String = _currentTotalCoverage.toString();
+		strCoverage = strCoverage + _lastCoverageDelta;
+		infoCard.RainProtectionValue.textAutoSize = "shrink";
+		infoCard.RainProtectionValue.html = true;
+		infoCard.RainProtectionValue.SetText(strCoverage, true);
+	}
 }
