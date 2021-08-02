@@ -1,4 +1,4 @@
-class gfx.ui.NavigationCode
+﻿class gfx.ui.NavigationCode
 {
 	static var UP: String = "up";
 	static var DOWN: String = "down";
@@ -18,7 +18,7 @@ class gfx.ui.NavigationCode
 	static var GAMEPAD_R3: String = "gamepad_R3";
 	static var GAMEPAD_START: String = "start";
 	static var GAMEPAD_BACK: String = "back";
-	static var ENTER: String = "enter-gamepad_A";;
+	static var ENTER: String = "enter-gamepad_A";
 	static var ESCAPE: String = "escape-gamepad_B";
 	static var END: String = "end";
 	static var HOME: String = "home";
@@ -26,9 +26,4 @@ class gfx.ui.NavigationCode
 	static var PAGE_UP: String = "pageUp";
 	static var TAB: String = "tab";
 	static var SHIFT_TAB: String = "shifttab";
-
-	function NavigationCode()
-	{
-	}
-
 }

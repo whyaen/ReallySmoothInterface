@@ -1,196 +1,182 @@
-dynamic class gfx.managers.InputDelegate extends gfx.events.EventDispatcher
-{
-	var dispatchEvent;
-	var keyRepeatStateLookup;
-	var keyRepeatSuppressLookup;
+﻿import gfx.events.EventDispatcher;
+import gfx.ui.NavigationCode;
+import gfx.ui.InputDetails;
 
-	function InputDelegate()
+import skyui.defines.Input;
+import skyui.util.GlobalFunctions;
+
+
+class gfx.managers.InputDelegate extends EventDispatcher
+{
+  /* SINGLETON */
+	
+	private static var _instance: InputDelegate;
+	
+	public static function get instance(): InputDelegate
+	{
+		if (_instance == null) 
+			_instance = new InputDelegate();
+			
+		return _instance;
+	}
+	
+	
+  /* PRIVATE VARIABLES */
+	
+	private var _keyRepeatStateLookup: Object;
+	private var _keyRepeatSuppressLookup: Object;
+	
+	private var _bEnableControlFixup: Boolean = false;
+	private var _acceptKeycode: Number = -1;
+	
+	
+  /* PROPERTIES */
+  
+  	public var isGamepad: Boolean = false;
+
+
+  /* INITIALIZATION */
+
+	public function InputDelegate()
 	{
 		super();
+		
 		Key.addListener(this);
-		this.keyRepeatSuppressLookup = {};
-		this.keyRepeatStateLookup = {};
+		_keyRepeatSuppressLookup = {};
+		_keyRepeatStateLookup = {};
 	}
-
-	static function get instance()
+	
+	
+  /* PUBLIC FUNCTIONS */
+  
+	// Certain menus wont receive navEquiv's, i.e. ENTER for activate in MapMenu
+	// Has to be disabled manually for skse.AllowTextInput
+	public function enableControlFixup(a_bEnabled: Boolean): Void
 	{
-		if (gfx.managers.InputDelegate._instance == null) 
-		{
-			gfx.managers.InputDelegate._instance = new gfx.managers.InputDelegate();
-		}
-		return gfx.managers.InputDelegate._instance;
+		if (a_bEnabled)
+			_acceptKeycode = GlobalFunctions.getMappedKey("Accept", Input.CONTEXT_MENUMODE, isGamepad);
+			
+		_bEnableControlFixup = a_bEnabled;
 	}
 
-	function setKeyRepeat(code, value, controllerIdx)
+	public function setKeyRepeat(a_code: Number, a_value, a_controllerIdx: Number): Void
 	{
-		var __reg2 = this.getKeyRepeatSuppress(controllerIdx);
-		__reg2[code] = !value;
+		var suppressState = this.getKeyRepeatSuppress(a_controllerIdx);
+		suppressState[a_code] = !a_value;
 	}
 
-	function readInput(type, code, scope, callBack)
+	public function readInput(type, code, scope, callBack)
 	{
 		return null;
 	}
 
-	function inputToNav(type, code, value)
+	public function onKeyDown(a_controllerIdx: Number): Void
 	{
-		if (type == "key") 
-		{
-			if ((__reg0 = code) === 38) 
-			{
-				return gfx.ui.NavigationCode.UP;
-			}
-			else if (__reg0 === 40) 
-			{
-				return gfx.ui.NavigationCode.DOWN;
-			}
-			else if (__reg0 === 37) 
-			{
-				return gfx.ui.NavigationCode.LEFT;
-			}
-			else if (__reg0 === 39) 
-			{
-				return gfx.ui.NavigationCode.RIGHT;
-			}
-			else if (__reg0 === 13) 
-			{
-				return gfx.ui.NavigationCode.ENTER;
-			}
-			else if (__reg0 === 32) // Added in 1.8.145.0
-			{
-				return gfx.ui.NavigationCode.ENTER;
-			}
-			else if (__reg0 === 8) 
-			{
-				return gfx.ui.NavigationCode.BACK;
-			}
-			else if (__reg0 === 9) 
-			{
-				return Key.isDown(16) ? gfx.ui.NavigationCode.SHIFT_TAB : gfx.ui.NavigationCode.TAB;
-			}
-			else if (__reg0 === 36) 
-			{
-				return gfx.ui.NavigationCode.HOME;
-			}
-			else if (__reg0 === 35) 
-			{
-				return gfx.ui.NavigationCode.END;
-			}
-			else if (__reg0 === 34) 
-			{
-				return gfx.ui.NavigationCode.PAGE_DOWN;
-			}
-			else if (__reg0 === 33) 
-			{
-				return gfx.ui.NavigationCode.PAGE_UP;
-			}
-			else if (__reg0 === 27) 
-			{
-				return gfx.ui.NavigationCode.ESCAPE;
-			}
-			else if (__reg0 === 96) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_A;
-			}
-			else if (__reg0 === 97) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_B;
-			}
-			else if (__reg0 === 98) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_X;
-			}
-			else if (__reg0 === 99) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_Y;
-			}
-			else if (__reg0 === 100) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_L1;
-			}
-			else if (__reg0 === 101) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_L2;
-			}
-			else if (__reg0 === 102) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_L3;
-			}
-			else if (__reg0 === 103) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_R1;
-			}
-			else if (__reg0 === 104) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_R2;
-			}
-			else if (__reg0 === 105) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_R3;
-			}
-			else if (__reg0 === 106) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_START;
-			}
-			else if (__reg0 !== 107) 
-			{
-				return;
-			}
-			return gfx.ui.NavigationCode.GAMEPAD_BACK;
+		var code = Key.getCode(a_controllerIdx);
+		var repeatState = getKeyRepeatState(a_controllerIdx);
+		
+		if (!repeatState[code]) {
+			handleKeyPress("keyDown", code, a_controllerIdx, skse.GetLastControl(true), skse.GetLastKeycode(true));
+			repeatState[code] = true;
+			
+		} else {
+			var suppressState = getKeyRepeatSuppress(a_controllerIdx);
+			if (!suppressState[code])
+				handleKeyPress("keyHold", code, a_controllerIdx, skse.GetLastControl(true), skse.GetLastKeycode(true));
 		}
 	}
 
-	function onKeyDown(controllerIdx)
+	public function onKeyUp(a_controllerIdx: Number): Void
 	{
-		var __reg2 = Key.getCode(controllerIdx);
-		var __reg4 = this.getKeyRepeatState(controllerIdx);
-		if (__reg4[__reg2]) 
-		{
-			var __reg5 = this.getKeyRepeatSuppress(controllerIdx);
-			if (!__reg5[__reg2]) 
-			{
-				this.handleKeyPress("keyHold", __reg2, controllerIdx);
+		var code = Key.getCode(a_controllerIdx);
+		var repeatState = getKeyRepeatState(a_controllerIdx);
+		repeatState[code] = false;
+		
+		handleKeyPress("keyUp", code, a_controllerIdx, skse.GetLastControl(false), skse.GetLastKeycode(false));
+	}
+	
+	
+  /* PRIVATE FUNCTIONS */
+
+	private function handleKeyPress(a_type: String, a_code: Number, a_controllerIdx: Number, a_control: String, a_skseKeycode: Number): Void
+	{
+		var navEquivalent: String = inputToNav(a_code);
+
+		if (navEquivalent != null) {
+			switch (navEquivalent) {
+				case NavigationCode.UP:
+				case NavigationCode.DOWN:
+				case NavigationCode.LEFT:
+				case NavigationCode.RIGHT:
+					a_control = null;
+					a_skseKeycode = null;
+					break;
 			}
-			return;
+		
+		// For != null, attempt fixup?
+		} else if (_bEnableControlFixup) {
+			if (a_skseKeycode == _acceptKeycode) {
+				navEquivalent = NavigationCode.ENTER;
+			}
 		}
-		this.handleKeyPress("keyDown", __reg2, controllerIdx);
-		__reg4[__reg2] = true;
+
+		var details = new InputDetails("key", a_code, a_type, navEquivalent, a_controllerIdx, a_control, a_skseKeycode);
+		dispatchEvent({type: "input", details: details});
 	}
 
-	function onKeyUp(controllerIdx)
+	private function getKeyRepeatState(a_controllerIdx: Number): Object
 	{
-		var __reg2 = Key.getCode(controllerIdx);
-		var __reg4 = this.getKeyRepeatState(controllerIdx);
-		__reg4[__reg2] = false;
-		this.handleKeyPress("keyUp", __reg2, controllerIdx);
+		var obj = this._keyRepeatStateLookup[a_controllerIdx];
+		if (!obj) {
+			obj = new Object();
+			_keyRepeatStateLookup[a_controllerIdx] = obj;
+		}
+		return obj;
 	}
 
-	function handleKeyPress(type, code, controllerIdx)
+	private function getKeyRepeatSuppress(a_controllerIdx: Number): Object
 	{
-		var __reg3 = new gfx.ui.InputDetails("key", code, type, this.inputToNav("key", code), controllerIdx);
-		this.dispatchEvent({type: "input", details: __reg3});
+		var obj = _keyRepeatSuppressLookup[a_controllerIdx];
+		if (!obj) {
+			obj = new Object();
+			_keyRepeatSuppressLookup[a_controllerIdx] = obj;
+		}
+		return obj;
 	}
-
-	function getKeyRepeatState(controllerIdx)
+	
+	private function inputToNav(a_code: Number): String
 	{
-		var __reg2 = this.keyRepeatStateLookup[controllerIdx];
-		if (!__reg2) 
+		switch (a_code)
 		{
-			__reg2 = new Object();
-			this.keyRepeatStateLookup[controllerIdx] = __reg2;
-		}
-		return __reg2;
-	}
+			case 38:	return NavigationCode.UP;
+			case 40:	return NavigationCode.DOWN;
+			case 37:	return NavigationCode.LEFT;
+			case 39:	return NavigationCode.RIGHT;
+			case 13:	return NavigationCode.ENTER;
+			case 8:		return NavigationCode.BACK;
+			case 9:		return Key.isDown(16) ? NavigationCode.SHIFT_TAB : NavigationCode.TAB;
+			case 36:	return NavigationCode.HOME;
+			case 35:	return NavigationCode.END;
+			case 34:	return NavigationCode.PAGE_DOWN;
+			case 33:	return NavigationCode.PAGE_UP;
+			case 27:	return NavigationCode.ESCAPE;
 
-	function getKeyRepeatSuppress(controllerIdx)
-	{
-		var __reg2 = this.keyRepeatSuppressLookup[controllerIdx];
-		if (!__reg2) 
-		{
-			__reg2 = new Object();
-			this.keyRepeatSuppressLookup[controllerIdx] = __reg2;
-		}
-		return __reg2;
-	}
 
+// TODO: should ignore these if platform != 0
+			case 96:	return NavigationCode.GAMEPAD_A;
+			case 97:	return NavigationCode.GAMEPAD_B;
+			case 98:	return NavigationCode.GAMEPAD_X;
+			case 99:	return NavigationCode.GAMEPAD_Y;
+			case 100:	return NavigationCode.GAMEPAD_L1;
+			case 101:	return NavigationCode.GAMEPAD_L2;
+			case 102:	return NavigationCode.GAMEPAD_L3;
+			case 103:	return NavigationCode.GAMEPAD_R1;
+			case 104:	return NavigationCode.GAMEPAD_R2;
+			case 105:	return NavigationCode.GAMEPAD_R3;
+			case 106:	return NavigationCode.GAMEPAD_START;
+			case 107:	return NavigationCode.GAMEPAD_BACK;
+		}
+		
+		return null;
+	}
 }

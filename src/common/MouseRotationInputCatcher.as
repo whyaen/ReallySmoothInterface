@@ -11,10 +11,10 @@
 
 	function onMouseDown(): Void
 	{
-		var targetIsThis: Boolean = Mouse.getTopMostEntity() == this;
-		if (targetIsThis || _parent.bFadedIn == false) 
+		var topMostEntity: Boolean = Mouse.getTopMostEntity() == this;
+		if (topMostEntity || _parent.bFadedIn == false) 
 			_parent.onMouseRotationStart();
-		if (targetIsThis && iProcessRotationDelayTimerID == undefined) 
+		if (topMostEntity && iProcessRotationDelayTimerID == undefined) 
 			iProcessRotationDelayTimerID = setInterval(this, "onProcessDelayElapsed", MouseRotationInputCatcher.PROCESS_ROTATION_DELAY);
 	}
 

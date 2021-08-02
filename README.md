@@ -1,8 +1,7 @@
-Permission instructions
------------------------
-You may use the decompiled/reconstructed vanilla source files in your mod without explicit permission.
-You must give us, the SkyUI team, credit when doing so. While we are not the original authors of this code, decompiling and fixing it up again took a lot of work that deserves mentioning.
-
+Related repositories
+--------------------
+### Unofficial UI SDK
+https://github.com/Mardoxx/skyrimui
 
 Disclaimer
 ----------

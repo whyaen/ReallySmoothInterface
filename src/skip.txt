@@ -1,0 +1,26 @@
+[no need to change]
+itemcard
+bottombar
+mcm_splash
+skyui_splash
+messagebox
+
+[seams to be broken]
+
+[done]
+bartermenu
+inventorylists
+magicmenu
+inventorymenu
+giftmenu
+containermenu
+quest_journal
+configpanel
+map
+skillsmenu(enderal)
+favoritesmenu
+craftingmenu
+
+[undone]
+
+[todo]

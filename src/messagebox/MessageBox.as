@@ -3,56 +3,66 @@ import gfx.controls.Button;
 
 class MessageBox extends MovieClip
 {
-	static var WIDTH_MARGIN: Number = 20;
-	static var HEIGHT_MARGIN: Number = 30;
-	static var MESSAGE_TO_BUTTON_SPACER: Number = 10;
-	static var SELECTION_INDICATOR_WIDTH: Number = 25;
+  /* CONSTANTS */
 	
-  /* Stage Elements */
-	var MessageText: TextField;
-	
-	var Divider: MovieClip;
-	var Background_mc: MovieClip;
-	
-  /* Private Variables */
-	var ButtonContainer: MovieClip;
-	var DefaultTextFormat: TextFormat;
-	
-	var Message: TextField;
-	var MessageButtons: Array;
+	private static var WIDTH_MARGIN: Number = 20;
+	private static var HEIGHT_MARGIN: Number = 30;
+	private static var MESSAGE_TO_BUTTON_SPACER: Number = 10;
+	private static var SELECTION_INDICATOR_WIDTH: Number = 25;
 	
 	
-	function MessageBox()
+  /* PRIVATE VARIABLES */
+  
+	private var _buttonContainer: MovieClip;
+	private var _defaultTextFormat: TextFormat;
+	private var _buttons: Array;
+	
+	
+  /* STAGE ELEMENTS */
+  
+	public var messageText: TextField;
+	public var divider: MovieClip;
+	public var background: MovieClip;
+	
+
+  /* INITIALIZATION */
+	
+	public function MessageBox()
 	{
 		super();
-		Message = MessageText;
-		Message.noTranslate = true;
-		MessageButtons = new Array();
-		ButtonContainer = undefined;
-		DefaultTextFormat = Message.getTextFormat();
+		
+		messageText.noTranslate = true;
+		_buttons = new Array();
+		_buttonContainer = undefined;
+		_defaultTextFormat = messageText.getTextFormat();
 		Key.addListener(this);
 		GameDelegate.addCallBack("setMessageText", this, "SetMessage");
 		GameDelegate.addCallBack("setButtons", this, "setupButtons");
 	}
 	
-	function setupButtons(): Void
+	
+  /* PUBLIC FUNCTIONS */
+	
+	// @API
+	public function setupButtons(): Void
 	{
-		if (undefined != ButtonContainer) {
-			ButtonContainer.removeMovieClip();
-			ButtonContainer = undefined;
+		if (_buttonContainer != null) {
+			_buttonContainer.removeMovieClip();
+			_buttonContainer = null;
 		}
-		MessageButtons.length = 0; // This truncates the array to 0
+		
+		_buttons.length = 0; // This truncates the array to 0
 		var controllerOrConsole: Boolean = arguments[0];
 		
 		if (arguments.length > 1) {
-			ButtonContainer = createEmptyMovieClip("Buttons", getNextHighestDepth());
+			_buttonContainer = createEmptyMovieClip("Buttons", getNextHighestDepth());
 			var buttonXOffset: Number = 0;
 			
 			for (var i: Number = 1; i < arguments.length; i++) {
 				if (arguments[i] == " ")
 					continue;
 				var buttonIdx: Number = i - 1;
-				var button: Button = Button(ButtonContainer.attachMovie("MessageBoxButton", "Button" + buttonIdx, ButtonContainer.getNextHighestDepth()));
+				var button: Button = Button(_buttonContainer.attachMovie("MessageBoxButton", "Button" + buttonIdx, _buttonContainer.getNextHighestDepth()));
 				var buttonText: TextField = button.ButtonText;
 				buttonText.autoSize = "center";
 				buttonText.verticalAlign = "center";
@@ -63,107 +73,138 @@ class MessageBox extends MovieClip
 				button.SelectionIndicatorHolder.SelectionIndicator._y = buttonText._y + buttonText._height / 2;
 				button._x = buttonXOffset + button._width / 2;
 				buttonXOffset = buttonXOffset + (button._width + MessageBox.SELECTION_INDICATOR_WIDTH);
-				MessageButtons.push(button);
+				_buttons.push(button);
 			}
-			InitButtons();
-			ResetDimensions();
+			
+			initButtons();
+			resetDimensions();
 			
 			if (controllerOrConsole) {
-				Selection.setFocus(MessageButtons[0]);
+				Selection.setFocus(_buttons[0]);
 			}
 		}
 	}
-
-	function InitButtons(): Void
+	
+	// @API
+	public function SetPlatform(a_platform: Number, a_bPS3Switch: Boolean): Void
 	{
-		for (var i: Number = 0; i < MessageButtons.length; i++) {
-			MessageButtons[i].handlePress = function () {};
-			MessageButtons[i].addEventListener("press", ClickCallback);
-			MessageButtons[i].addEventListener("focusIn", FocusCallback);
-			MessageButtons[i].ButtonText.noTranslate = true;
+		if (a_platform != 0 && _buttons.length > 0) {
+			Selection.setFocus(_buttons[0]);
 		}
 	}
 
-	function SetMessage(aText: String, abHTML: Boolean): Void
+	// @API
+	public function SetMessage(aText: String, abHTML: Boolean): Void
 	{
-		Message.autoSize = "center";
-		Message.setTextFormat(DefaultTextFormat);
-		Message.setNewTextFormat(DefaultTextFormat);
-		Message.html = abHTML;
-		if (abHTML) {
-			Message.htmlText = aText;
-		} else {
-			Message.SetText(aText);
-		}
-		ResetDimensions();
+		messageText.autoSize = "center";
+		messageText.setTextFormat(_defaultTextFormat);
+		messageText.setNewTextFormat(_defaultTextFormat);
+		messageText.html = abHTML;
+		if (abHTML)
+			messageText.htmlText = aText;
+		else
+			messageText.SetText(aText);
+		resetDimensions();
+		processMessage(aText);
 	}
-
-	function ResetDimensions(): Void
+	
+	
+  /* PRIVATE FUNCTIONS */
+  
+	private function initButtons(): Void
 	{
-		PositionElements();
+		for (var i: Number = 0; i < _buttons.length; i++) {
+			_buttons[i].handlePress = function () {};
+			_buttons[i].addEventListener("press", clickCallback);
+			_buttons[i].addEventListener("focusIn", focusCallback);
+			_buttons[i].ButtonText.noTranslate = true;
+		}
+	}
+  
+	private function resetDimensions(): Void
+	{
+		positionElements();
 		var parentBounds: Object = getBounds(_parent);
 		var i: Number = Stage.height * 0.85 - parentBounds.yMax;
 		if (i < 0) {
-			Message.autoSize = false;
+			messageText.autoSize = false;
 			var extraHeight: Number = i * 100 / _yscale;
-			Message._height = Message._height + extraHeight;
-			PositionElements();
+			messageText._height = messageText._height + extraHeight;
+			positionElements();
 		}
 	}
-
-	function PositionElements(): Void
+  
+	private function positionElements(): Void
 	{
-		var background: MovieClip = Background_mc;
 		var maxLineWidth: Number = 0;
 		
-		for (var i: Number = 0; i < Message.numLines; i++)
-			maxLineWidth = Math.max(maxLineWidth, Message.getLineMetrics(i).width);
+		for (var i: Number = 0; i < messageText.numLines; i++)
+			maxLineWidth = Math.max(maxLineWidth, messageText.getLineMetrics(i).width);
 		
 		var buttonContainerWidth = 0;
 		var buttonContainerHeight = 0;
-		if (ButtonContainer != undefined) {
-			buttonContainerWidth = ButtonContainer._width;
-			buttonContainerHeight = ButtonContainer._height;
+		if (_buttonContainer != undefined) {
+			buttonContainerWidth = _buttonContainer._width;
+			buttonContainerHeight = _buttonContainer._height;
 		}
 		background._width = Math.max(maxLineWidth + 60, buttonContainerWidth + MessageBox.WIDTH_MARGIN * 2);
-		background._height = Message._height + buttonContainerHeight + MessageBox.HEIGHT_MARGIN * 2 + MessageBox.MESSAGE_TO_BUTTON_SPACER;
-		Message._y = (0 - background._height) / 2 + MessageBox.HEIGHT_MARGIN;
-		ButtonContainer._y = background._height / 2 - MessageBox.HEIGHT_MARGIN - ButtonContainer._height / 2;
-		ButtonContainer._x = (0 - ButtonContainer._width) / 2;
-		Divider._width = background._width - MessageBox.WIDTH_MARGIN * 2;
-		Divider._y = ButtonContainer._y - ButtonContainer._height / 2 - MessageBox.MESSAGE_TO_BUTTON_SPACER / 2;
+		background._height = messageText._height + buttonContainerHeight + MessageBox.HEIGHT_MARGIN * 2 + MessageBox.MESSAGE_TO_BUTTON_SPACER;
+		messageText._y = (0 - background._height) / 2 + MessageBox.HEIGHT_MARGIN;
+		_buttonContainer._y = background._height / 2 - MessageBox.HEIGHT_MARGIN - _buttonContainer._height / 2;
+		_buttonContainer._x = (0 - _buttonContainer._width) / 2;
+		
+		divider._width = background._width - MessageBox.WIDTH_MARGIN * 2;
+		divider._y = _buttonContainer._y - _buttonContainer._height / 2 - MessageBox.MESSAGE_TO_BUTTON_SPACER / 2;
 	}
 
-	function ClickCallback(aEvent: Object): Void
+	private function clickCallback(aEvent: Object): Void
 	{
 		GameDelegate.call("buttonPress", [Number(aEvent.target._name.substr(-1))]);
 	}
 
-	function FocusCallback(aEvent: Object): Void
+	private function focusCallback(aEvent: Object): Void
 	{
 		GameDelegate.call("PlaySound", ["UIMenuFocus"]);
 	}
 
-	function onKeyDown(): Void
+	private function onKeyDown(): Void
 	{
-		if (Key.getCode() == 89 && MessageButtons[0].ButtonText.text == "Yes") {
+		if (Key.getCode() == 89 && _buttons[0].ButtonText.text == "Yes") {
 			GameDelegate.call("buttonPress", [0]);
 			return;
 		}
-		if (Key.getCode() == 78 && MessageButtons[1].ButtonText.text == "No") {
+		if (Key.getCode() == 78 && _buttons[1].ButtonText.text == "No") {
 			GameDelegate.call("buttonPress", [1]);
 			return;
 		}
-		if (Key.getCode() == 65 && MessageButtons[2].ButtonText.text == "Yes to All") {
+		if (Key.getCode() == 65 && _buttons[2].ButtonText.text == "Yes to All") {
 			GameDelegate.call("buttonPress", [2]);
 		}
 	}
-
-	function SetPlatform(aiPlatform: Number, abPS3Switch: Boolean): Void
+	
+	private function processMessage(a_text: String): Void
 	{
-		if (aiPlatform != 0 && MessageButtons.length > 0) {
-			Selection.setFocus(MessageButtons[0]);
+		if (a_text.slice(0,2) != "$$" || a_text.slice(a_text.length-2, a_text.length) != "$$")
+			return;
+		
+		var command = a_text.slice(2, a_text.length-2);
+		
+		var key = command.slice(0, command.indexOf("="));
+		if (key == null)
+			return;
+
+		var val = command.slice(command.indexOf("=") + 1);
+		if (val == null)
+			return;
+
+		if (key.toLowerCase() == "loadmovie") {
+			var oldMenu = _root.MessageMenu;
+			oldMenu._visible = false;
+			oldMenu.enabled = false;
+
+			var newMenu = _root.createEmptyMovieClip("menuContainer", _root.getNextHighestDepth());
+			skse.Log("Loading " + val);
+			newMenu.loadMovie(val);
 		}
 	}
-
 }
