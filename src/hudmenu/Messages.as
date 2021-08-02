@@ -1,11 +1,11 @@
-﻿class Messages extends MovieClip
+class Messages extends MovieClip
 {
 	static var MAX_SHOWN: Number = 4;
 	static var Y_SPACING: Number = 15;
-	static var END_ANIM_FRAME: Number = 400;	// 80 - 24 fps
-	static var InstanceCounter: Number = 0;		// 100 - 30 fps
-	var MessageArray: Array;					// 200 - 60 fps
-	var ShownCount: Number;						// 400 - 120 fps
+	static var END_ANIM_FRAME: Number = 80;
+	static var InstanceCounter: Number = 0;
+	var MessageArray: Array;
+	var ShownCount: Number;
 	var ShownMessageArray: Array;
 	var bAnimating: Boolean;
 	var ySpacing: Number;

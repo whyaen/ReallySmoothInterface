@@ -872,9 +872,6 @@ class SystemPage extends MovieClip
 				
 			case SystemPage.HELP_LIST_STATE:
 				HelpList.disableInput = false;
-				FocusHandler.instance.setFocus(HelpList, 0);
-				break;
-
 			case SystemPage.HELP_TEXT_STATE:
 				FocusHandler.instance.setFocus(HelpText, 0);
 				break;
